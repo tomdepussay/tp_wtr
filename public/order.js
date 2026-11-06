@@ -39,6 +39,22 @@ async function main() {
   ).toLocaleString("fr-FR");
   status(order.status);
   document.getElementById("details").hidden = false;
+
+  const source = new EventSource(`/orders/${id}/stream`);
+
+  source.addEventListener("order-status-changed", (e) => {
+    status(JSON.parse(e.data).status);
+  });
+
+  source.addEventListener("order-cancelled", (e) => {
+    status(JSON.parse(e.data).status);
+  });
+
+  source.onerror = () => {
+    console.log("Coupure, reconnexion automatique…");
+  };
+
+  window.addEventListener("pagehide", () => source.close());
 }
 
 main();
