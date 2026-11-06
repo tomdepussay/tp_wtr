@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Suivi de commande</title>
+  </head>
+  <body>
+    <h1>Suivi de commande</h1>
+
+    <form id="search" action="order.html" method="get" hidden>
+      <label for="order-input">Numéro de commande</label>
+      <input id="order-input" name="id" type="number" min="1" required />
+      <button type="submit">Voir la commande</button>
+    </form>
+
+    <p id="message"></p>
+
+    <ul id="details" hidden>
+      <li>Commande n° <span id="order-id"></span></li>
+      <li>Produit : <span id="product"></span></li>
+      <li>Quantité : <span id="quantity"></span></li>
+      <li>Passée le : <span id="created-at"></span></li>
+      <li>Statut : <strong id="status"></strong></li>
+    </ul>
+
+    <script src="order.js"></script>
+  </body>
+</html>
