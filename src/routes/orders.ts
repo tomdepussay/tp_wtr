@@ -6,7 +6,7 @@ import {
   saveOrders,
   saveProducts,
 } from "../db";
-import type { Order } from "../types";
+import type { Order, Status } from "../types";
 
 export const router = Router();
 
@@ -82,3 +82,71 @@ router.post("/", async (req, res) => {
   res.status(201).json(order);
 });
 
+const NEXT_STATUS: Record<Status, Status | null> = {
+  preparing: "shipped",
+  shipped: "delivered",
+  delivered: null,
+  cancelled: null,
+};
+
+async function deliver(id: number): Promise<void> {
+  const orders = await getOrders();
+  const order = orders.find((o) => o.id === id);
+  if (order?.status !== "shipped") {
+    return;
+  }
+  order.status = "delivered";
+  await saveOrders(orders);
+}
+
+router.post("/:id/nextStatus", async (req, res) => {
+  const orders = await getOrders();
+  const order = orders.find((o) => o.id === Number(req.params.id));
+  if (!order) {
+    res.status(404).json({ error: "La commande n'existe pas" });
+    return;
+  }
+
+  const next = NEXT_STATUS[order.status];
+  if (!next) {
+    res.status(409).json({ error: "Cette commande ne peut pas changer de statut" });
+    return;
+  }
+
+  order.status = next;
+  await saveOrders(orders);
+
+  if (next === "shipped") {
+    setTimeout(() => deliver(order.id), 20000);
+  }
+
+  res.json(order);
+});
+
+router.post("/:id/cancel", async (req, res) => {
+  const orders = await getOrders();
+  const order = orders.find((o) => o.id === Number(req.params.id));
+  if (!order) {
+    res.status(404).json({ error: "La commande n'existe pas" });
+    return;
+  }
+
+  if (order.status !== "preparing") {
+    res.status(409).json({
+      error: "Seule une commande en préparation peut être annulée",
+    });
+    return;
+  }
+
+  const products = await getProducts();
+  const product = products.find((p) => p.id === order.productId);
+  if (product) {
+    product.stock += order.quantity;
+    await saveProducts(products);
+  }
+
+  order.status = "cancelled";
+  await saveOrders(orders);
+
+  res.json(order);
+});
