@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, type Response } from "express";
 import {
   getOrders,
   getProducts,
@@ -6,6 +6,7 @@ import {
   saveOrders,
   saveProducts,
 } from "../db";
+import { broadcast, orderClients } from "../sse";
 import type { Order, Status } from "../types";
 
 export const router = Router();
@@ -22,6 +23,26 @@ router.get("/:id", async (req, res) => {
     return;
   }
   res.json(order);
+});
+
+router.get("/:id/stream", async (req, res) => {
+  const orders = await getOrders();
+  const order = orders.find((o) => o.id === Number(req.params.id));
+  if (!order) {
+    res.status(404).json({ error: "Commande introuvable" });
+    return;
+  }
+
+  res.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive",
+  });
+  res.flushHeaders();
+  const subscribers = orderClients.get(order.id) ?? new Set<Response>();
+  orderClients.set(order.id, subscribers);
+  subscribers.add(res);
+  res.on("close", () => subscribers.delete(res));
 });
 
 router.post("/", async (req, res) => {
@@ -66,6 +87,7 @@ router.post("/", async (req, res) => {
 
   product.stock -= quantity;
   await saveProducts(products);
+  broadcast("stock-changed", product);
 
   const orders = await getOrders();
   const order: Order = {
@@ -78,6 +100,7 @@ router.post("/", async (req, res) => {
   };
   orders.push(order);
   await saveOrders(orders);
+  broadcast("order-created", order, order.id);
 
   res.status(201).json(order);
 });
@@ -97,6 +120,7 @@ async function deliver(id: number): Promise<void> {
   }
   order.status = "delivered";
   await saveOrders(orders);
+  broadcast("order-status-changed", order, order.id);
 }
 
 router.post("/:id/nextStatus", async (req, res) => {
@@ -115,6 +139,7 @@ router.post("/:id/nextStatus", async (req, res) => {
 
   order.status = next;
   await saveOrders(orders);
+  broadcast("order-status-changed", order, order.id);
 
   if (next === "shipped") {
     setTimeout(() => deliver(order.id), 20000);
@@ -143,10 +168,12 @@ router.post("/:id/cancel", async (req, res) => {
   if (product) {
     product.stock += order.quantity;
     await saveProducts(products);
+    broadcast("stock-changed", product);
   }
 
   order.status = "cancelled";
   await saveOrders(orders);
+  broadcast("order-cancelled", order, order.id);
 
   res.json(order);
 });
