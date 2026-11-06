@@ -1,0 +1,40 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "name": "Tom DEPUSSAY",
+      "username": "tdepussay",
+      "email": "tom.depussay@mail.com"
+    },
+    {
+      "id": 2,
+      "name": "Florent MENUS",
+      "username": "fmenus",
+      "email": "florent.menus@mail.com"
+    },
+    {
+      "id": 3,
+      "name": "Jérôme CHENAIE",
+      "username": "jchenaie",
+      "email": "jerome.chenaie@mail.com"
+    }
+  ],
+  "products": [
+    {
+      "id": 1,
+      "name": "Souris",
+      "stock": 10
+    },
+    {
+      "id": 2,
+      "name": "Clavier",
+      "stock": 5
+    },
+    {
+      "id": 3,
+      "name": "Ordinateur",
+      "stock": 2
+    }
+  ],
+  "orders": []
+}
